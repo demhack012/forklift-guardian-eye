@@ -18,11 +18,36 @@ const COLORS = {
   stopTime: 'hsl(210, 80%, 55%)',
 };
 
-const tooltipStyle = {
-  contentStyle: {
-    backgroundColor: 'hsl(220, 18%, 14%)',
-    border: '1px solid hsl(220, 14%, 22%)',
-    borderRadius: '8px',
+function useChartTheme() {
+  const getVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const [style, setStyle] = useState(() => ({
+    grid: `hsl(${getVar('--chart-grid') || '220 14% 22%'})`,
+    tick: `hsl(${getVar('--chart-tick') || '215 15% 55%'})`,
+    tooltipBg: `hsl(${getVar('--chart-tooltip-bg') || '220 18% 14%'})`,
+    tooltipBorder: `hsl(${getVar('--chart-tooltip-border') || '220 14% 22%'})`,
+    tooltipText: `hsl(${getVar('--chart-tooltip-text') || '210 20% 92%'})`,
+  }));
+
+  // Re-read on theme change
+  useMemo(() => {
+    const observer = new MutationObserver(() => {
+      setTimeout(() => {
+        setStyle({
+          grid: `hsl(${getVar('--chart-grid') || '220 14% 22%'})`,
+          tick: `hsl(${getVar('--chart-tick') || '215 15% 55%'})`,
+          tooltipBg: `hsl(${getVar('--chart-tooltip-bg') || '220 18% 14%'})`,
+          tooltipBorder: `hsl(${getVar('--chart-tooltip-border') || '220 14% 22%'})`,
+          tooltipText: `hsl(${getVar('--chart-tooltip-text') || '210 20% 92%'})`,
+        });
+      }, 50);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  return style;
+}
+
     color: 'hsl(210, 20%, 92%)',
   },
 };
