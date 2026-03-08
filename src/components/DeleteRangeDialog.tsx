@@ -89,7 +89,7 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
         <DialogHeader>
           <DialogTitle>Delete Events by Date Range</DialogTitle>
           <DialogDescription>
-            Select a date range to remove events. The updated CSV will be downloaded automatically.
+            Select a date range to permanently remove events from the CSV file on the server.
           </DialogDescription>
         </DialogHeader>
 
