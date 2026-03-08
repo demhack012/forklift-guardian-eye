@@ -4,102 +4,145 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { ForkliftEvent, ParsedRow, parseEvent } from '@/lib/eventTypes';
 import {
-  getTodayStats, getWeekStats, getOverallStats, formatStopTime, PeriodStats,
+  getTodayStats, getWeekStats, getOverallStats, getFilteredStats,
+  formatStopTime, PeriodStatsWithTrend, PeriodStats, generateInsights,
 } from '@/lib/eventStats';
 import { KpiCard } from '@/components/KpiCard';
 import { DashboardCharts } from '@/components/DashboardCharts';
+import { EventsTable } from '@/components/EventsTable';
+import { InsightsPanel } from '@/components/InsightsPanel';
+import { GlobalDateFilter } from '@/components/GlobalDateFilter';
 import { ThemeToggle } from '@/components/ThemeToggle';
-
 import {
-  AlertTriangle, OctagonX, Timer, Truck, Activity, Download, RefreshCw, Loader2,
+  AlertTriangle, OctagonX, Timer, Truck, Activity, Download,
+  RefreshCw, Loader2, Globe, Clock,
 } from 'lucide-react';
 
-function StatSection({ title, stats, icon }: { title: string; stats: PeriodStats; icon: React.ReactNode }) {
+const AUTO_REFRESH_INTERVAL = 45_000; // 45 seconds
+
+function StatSection({
+  title, stats, icon, showTrends, trendLabel,
+}: {
+  title: string;
+  stats: PeriodStatsWithTrend | PeriodStats;
+  icon: React.ReactNode;
+  showTrends?: boolean;
+  trendLabel?: string;
+}) {
+  const trends = 'warningsTrend' in stats ? stats : null;
   return (
     <div>
       <div className="mb-3 flex items-center gap-2">
         {icon}
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard title="Warnings" value={stats.warnings} icon={AlertTriangle} variant="warning" />
-        <KpiCard title="Brake Engagements" value={stats.dangers} icon={OctagonX} variant="danger" />
-        <KpiCard title="Total Stop Time" value={formatStopTime(stats.totalStopTimeSeconds)} icon={Timer} variant="info" />
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+        <KpiCard
+          title="Warnings"
+          value={stats.warnings}
+          icon={AlertTriangle}
+          variant="warning"
+          trend={showTrends && trends ? trends.warningsTrend : undefined}
+          trendLabel={trendLabel}
+        />
+        <KpiCard
+          title="Brake Engagements"
+          value={stats.dangers}
+          icon={OctagonX}
+          variant="danger"
+          trend={showTrends && trends ? trends.dangersTrend : undefined}
+          trendLabel={trendLabel}
+        />
+        <KpiCard
+          title="Total Stop Time"
+          value={formatStopTime(stats.totalStopTimeSeconds)}
+          icon={Timer}
+          variant="info"
+          trend={showTrends && trends ? trends.stopTimeTrend : undefined}
+          trendLabel={trendLabel}
+        />
       </div>
     </div>
   );
+}
+
+function getTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return 'UTC';
+  }
+}
+
+function getTimezoneOffset(): string {
+  const offset = -new Date().getTimezoneOffset();
+  const h = Math.floor(Math.abs(offset) / 60);
+  const m = Math.abs(offset) % 60;
+  const sign = offset >= 0 ? '+' : '-';
+  return `GMT${sign}${h}${m > 0 ? `:${m.toString().padStart(2, '0')}` : ''}`;
 }
 
 const CSV_URL = '/data/events.csv';
 
 export default function Index() {
   const [events, setEvents] = useState<ForkliftEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<ForkliftEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const dashboardRef = useRef<HTMLDivElement>(null);
 
-  const loadCSV = useCallback(async () => {
-    setLoading(true);
+  const loadCSV = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
-    console.log('[CSV] Fetching from:', CSV_URL);
     try {
       const res = await fetch(CSV_URL);
-      console.log('[CSV] Response status:', res.status, 'Content-Type:', res.headers.get('content-type'));
       if (!res.ok) throw new Error('Could not load events.csv');
       const text = await res.text();
-      console.log('[CSV] Response length:', text.length, 'First 200 chars:', text.substring(0, 200));
-      
+
       if (text.startsWith('<!doctype') || text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
-        throw new Error('Got HTML instead of CSV — file not found at /data/events.csv. Place the CSV in public/data/events.csv');
+        throw new Error('Got HTML instead of CSV — file not found at /data/events.csv');
       }
-      
+
       Papa.parse<ParsedRow>(text, {
         header: true,
         delimiter: ',',
         skipEmptyLines: true,
         complete(results) {
-          console.log('[CSV] Parsed rows:', results.data.length, 'Fields:', results.meta.fields);
-          console.log('[CSV] First 3 raw rows:', JSON.stringify(results.data.slice(0, 3)));
-          
-          // Show unique Zone_Level values
-          const zoneLevels = new Set(results.data.map(r => r.Zone_Level));
-          console.log('[CSV] Unique Zone_Level values:', Array.from(zoneLevels));
-          
           const parsed = results.data
             .filter(r => r.Event_ID && r.Zone_Level)
             .map(parseEvent)
             .filter(e => !isNaN(e.Trigger_Timestamp.getTime()));
-          console.log('[CSV] Valid events:', parsed.length);
-          if (parsed.length > 0) {
-            console.log('[CSV] First event:', JSON.stringify(parsed[0], null, 2));
-            console.log('[CSV] Zone_Level distribution:', 
-              'Warning:', parsed.filter(e => e.Zone_Level === 'Warning').length,
-              'Danger:', parsed.filter(e => e.Zone_Level === 'Danger').length,
-              'Other:', parsed.filter(e => e.Zone_Level !== 'Warning' && e.Zone_Level !== 'Danger').length
-            );
-          }
           setEvents(parsed);
-          setLoading(false);
+          setLastRefresh(new Date());
+          if (!silent) setLoading(false);
         },
       });
     } catch (err: any) {
-      console.error('[CSV] Error:', err.message);
-      setError(err.message);
-      setLoading(false);
+      if (!silent) {
+        setError(err.message);
+        setLoading(false);
+      }
     }
   }, []);
 
+  // Initial load
+  useEffect(() => { loadCSV(); }, [loadCSV]);
+
+  // Auto-refresh
   useEffect(() => {
-    loadCSV();
+    const interval = setInterval(() => loadCSV(true), AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
   }, [loadCSV]);
 
   const exportPDF = async () => {
     if (!dashboardRef.current) return;
     setExporting(true);
     try {
+      const isDark = document.documentElement.classList.contains('dark');
       const canvas = await html2canvas(dashboardRef.current, {
-        backgroundColor: '#161b26',
+        backgroundColor: isDark ? '#161b26' : '#f9f9f9',
         scale: 2,
         useCORS: true,
       });
@@ -107,9 +150,19 @@ export default function Index() {
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'px',
-        format: [canvas.width, canvas.height],
+        format: [canvas.width, canvas.height + 120],
       });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+      // Branded header
+      pdf.setFontSize(20);
+      pdf.setTextColor(40, 40, 40);
+      pdf.text('ManEx Systems — Forklift Safety Report', 40, 50);
+      pdf.setFontSize(11);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text(`Generated: ${new Date().toLocaleString()} | Timezone: ${getTimezone()} (${getTimezoneOffset()})`, 40, 75);
+      pdf.text(`Events: ${filteredEvents.length.toLocaleString()} | manex.systems | info@manex.systems`, 40, 95);
+
+      pdf.addImage(imgData, 'PNG', 0, 120, canvas.width, canvas.height);
       pdf.save(`forklift-report-${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch {
       console.error('PDF export failed');
@@ -136,7 +189,7 @@ export default function Index() {
           <p className="text-foreground">Failed to load CSV</p>
           <p className="text-sm text-muted-foreground">{error}</p>
           <button
-            onClick={loadCSV}
+            onClick={() => loadCSV()}
             className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >
             <RefreshCw className="h-4 w-4" /> Retry
@@ -146,61 +199,89 @@ export default function Index() {
     );
   }
 
-  const today = getTodayStats(events);
-  const week = getWeekStats(events);
-  const overall = getOverallStats(events);
+  const today = getTodayStats(filteredEvents);
+  const week = getWeekStats(filteredEvents);
+  const overall = getOverallStats(filteredEvents);
+  const insights = generateInsights(filteredEvents);
 
   return (
-    <div ref={dashboardRef} className="min-h-screen p-6 lg:p-8">
+    <div ref={dashboardRef} className="min-h-screen p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-primary/10 p-2">
-            <Truck className="h-6 w-6 text-primary" />
+            <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">Forklift Safety Dashboard</h1>
-            <p className="text-xs text-muted-foreground">{events.length.toLocaleString()} events loaded</p>
+            <h1 className="text-lg sm:text-xl font-bold text-foreground">Forklift Safety Dashboard</h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span>{events.length.toLocaleString()} events loaded</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="inline-flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                {getTimezone()} ({getTimezoneOffset()})
+              </span>
+              <span className="hidden sm:inline">•</span>
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Auto-refresh {AUTO_REFRESH_INTERVAL / 1000}s
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <ThemeToggle />
-          
           <button
-            onClick={loadCSV}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted"
+            onClick={() => loadCSV()}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted"
           >
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
           <a
             href={CSV_URL}
             download="events.csv"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted"
           >
-            <Download className="h-4 w-4" /> Download CSV
+            <Download className="h-4 w-4" /> <span className="hidden sm:inline">Download </span>CSV
           </a>
           <button
             onClick={exportPDF}
             disabled={exporting}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:scale-105 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-primary-foreground transition-transform hover:scale-105 disabled:opacity-50"
           >
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            {exporting ? 'Exporting…' : 'Download PDF'}
+            {exporting ? 'Exporting…' : 'PDF Report'}
           </button>
         </div>
       </div>
 
+      {/* Global Date Filter */}
+      <div className="mb-6">
+        <GlobalDateFilter events={events} onFilter={setFilteredEvents} />
+      </div>
+
+      {/* Insights */}
+      <div className="mb-6">
+        <InsightsPanel insights={insights} />
+      </div>
+
       {/* KPI Sections */}
-      <div className="space-y-8">
-        <StatSection title="Today" stats={today} icon={<Activity className="h-4 w-4 text-success" />} />
-        <StatSection title="This Week" stats={week} icon={<Activity className="h-4 w-4 text-info" />} />
+      <div className="space-y-6 sm:space-y-8">
+        <StatSection title="Today" stats={today} showTrends trendLabel="vs yesterday" icon={<Activity className="h-4 w-4 text-success" />} />
+        <StatSection title="This Week" stats={week} showTrends trendLabel="vs last week" icon={<Activity className="h-4 w-4 text-info" />} />
         <StatSection title="Overall" stats={overall} icon={<Activity className="h-4 w-4 text-primary" />} />
       </div>
 
       {/* Charts */}
-      <div className="mt-10">
+      <div className="mt-8 sm:mt-10">
         <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Historical Analytics</h2>
-        <DashboardCharts events={events} />
+        <DashboardCharts events={filteredEvents} />
+      </div>
+
+      {/* Data Table */}
+      <div className="mt-8 sm:mt-10">
+        <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Event Log</h2>
+        <EventsTable events={filteredEvents} />
       </div>
 
       {/* Footer */}
@@ -217,6 +298,9 @@ export default function Index() {
           <a href="tel:+971504897143" className="hover:text-foreground transition-colors">+971 50 489 7143</a>
           <a href="mailto:info@manex.systems" className="hover:text-foreground transition-colors">info@manex.systems</a>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Last refreshed: {lastRefresh.toLocaleTimeString()} • Auto-refresh every {AUTO_REFRESH_INTERVAL / 1000}s
+        </p>
       </footer>
     </div>
   );
