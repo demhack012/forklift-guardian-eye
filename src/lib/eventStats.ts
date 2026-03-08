@@ -165,6 +165,79 @@ export function getPeakHours(events: ForkliftEvent[]): { hour: string; total: nu
   return hourly.filter(h => h.isPeak).sort((a, b) => b.total - a.total).slice(0, 3);
 }
 
+export interface SparklinePoint {
+  label: string;
+  value: number;
+}
+
+/** Last 24 hours, one point per hour */
+export function getHourlySparkline(events: ForkliftEvent[], metric: 'warnings' | 'dangers' | 'stopTime'): SparklinePoint[] {
+  const now = new Date();
+  const points: SparklinePoint[] = [];
+  for (let i = 23; i >= 0; i--) {
+    const hourStart = new Date(now);
+    hourStart.setHours(now.getHours() - i, 0, 0, 0);
+    const hourEnd = new Date(hourStart);
+    hourEnd.setHours(hourStart.getHours() + 1);
+    const label = `${hourStart.getHours().toString().padStart(2, '0')}:00`;
+    let value = 0;
+    for (const e of events) {
+      if (e.Trigger_Timestamp >= hourStart && e.Trigger_Timestamp < hourEnd) {
+        if (metric === 'warnings' && e.Zone_Level === 'Warning') value++;
+        if (metric === 'dangers' && e.Zone_Level === 'Danger') value++;
+        if (metric === 'stopTime' && e.Zone_Level === 'Danger' && e.Stop_Timestamp) {
+          value += Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp));
+        }
+      }
+    }
+    points.push({ label, value });
+  }
+  return points;
+}
+
+/** Last 7 days, one point per day */
+export function getDailySparkline(events: ForkliftEvent[], metric: 'warnings' | 'dangers' | 'stopTime'): SparklinePoint[] {
+  const points: SparklinePoint[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const day = startOfDay(subDays(new Date(), i));
+    const nextDay = startOfDay(subDays(new Date(), i - 1));
+    const label = day.toLocaleDateString('en-US', { weekday: 'short' });
+    let value = 0;
+    for (const e of events) {
+      if (e.Trigger_Timestamp >= day && e.Trigger_Timestamp < nextDay) {
+        if (metric === 'warnings' && e.Zone_Level === 'Warning') value++;
+        if (metric === 'dangers' && e.Zone_Level === 'Danger') value++;
+        if (metric === 'stopTime' && e.Zone_Level === 'Danger' && e.Stop_Timestamp) {
+          value += Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp));
+        }
+      }
+    }
+    points.push({ label, value });
+  }
+  return points;
+}
+
+/** Monthly aggregates across all data */
+export function getMonthlySparkline(events: ForkliftEvent[], metric: 'warnings' | 'dangers' | 'stopTime'): SparklinePoint[] {
+  const map = new Map<string, number>();
+  for (const e of events) {
+    const key = `${e.Trigger_Timestamp.getFullYear()}-${(e.Trigger_Timestamp.getMonth() + 1).toString().padStart(2, '0')}`;
+    if (!map.has(key)) map.set(key, 0);
+    if (metric === 'warnings' && e.Zone_Level === 'Warning') map.set(key, map.get(key)! + 1);
+    if (metric === 'dangers' && e.Zone_Level === 'Danger') map.set(key, map.get(key)! + 1);
+    if (metric === 'stopTime' && e.Zone_Level === 'Danger' && e.Stop_Timestamp) {
+      map.set(key, map.get(key)! + Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp)));
+    }
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => {
+      const [y, m] = key.split('-');
+      const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      return { label, value };
+    });
+}
+
 export function generateInsights(events: ForkliftEvent[]): string[] {
   const insights: string[] = [];
   const today = getTodayStats(events);
