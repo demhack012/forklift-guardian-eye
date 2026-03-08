@@ -1,5 +1,5 @@
 import { ForkliftEvent } from '@/lib/eventTypes';
-import { getDailyAggregates, getCameraAggregates, getHourlyAggregates } from '@/lib/eventStats';
+import { getDailyAggregates, getHourlyAggregates } from '@/lib/eventStats';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, AreaChart, Area
@@ -22,7 +22,6 @@ const tooltipStyle = {
 
 export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
   const daily = getDailyAggregates(events);
-  const camera = getCameraAggregates(events);
   const hourly = getHourlyAggregates(events);
 
   return (
@@ -54,22 +53,6 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
             <Tooltip {...tooltipStyle} />
             <Area type="monotone" dataKey="stopTime" stroke={COLORS.stopTime} fill={COLORS.stopTime} fillOpacity={0.2} strokeWidth={2} />
           </AreaChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Camera Breakdown */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Events by Camera</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={camera}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 22%)" />
-            <XAxis dataKey="camera" tick={{ fill: 'hsl(215, 15%, 55%)', fontSize: 11 }} />
-            <YAxis tick={{ fill: 'hsl(215, 15%, 55%)', fontSize: 11 }} />
-            <Tooltip {...tooltipStyle} />
-            <Legend />
-            <Bar dataKey="warnings" fill={COLORS.warning} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="dangers" fill={COLORS.danger} radius={[4, 4, 0, 0]} />
-          </BarChart>
         </ResponsiveContainer>
       </div>
 
