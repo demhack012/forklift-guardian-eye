@@ -48,9 +48,7 @@ function useChartTheme() {
   return style;
 }
 
-    color: 'hsl(210, 20%, 92%)',
-  },
-};
+
 
 function DateRangeFilter({
   fromDate, toDate, onFromChange, onToChange, onClear,
