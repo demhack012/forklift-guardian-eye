@@ -168,6 +168,13 @@ export default function Index() {
           >
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
+          <a
+            href={CSV_URL}
+            download="events.csv"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted"
+          >
+            <Download className="h-4 w-4" /> Download CSV
+          </a>
           <button
             onClick={exportPDF}
             disabled={exporting}
