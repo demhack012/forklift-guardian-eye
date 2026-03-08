@@ -22,7 +22,6 @@ const tooltipStyle = {
 
 export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
   const daily = getDailyAggregates(events);
-  const camera = getCameraAggregates(events);
   const hourly = getHourlyAggregates(events);
 
   return (
