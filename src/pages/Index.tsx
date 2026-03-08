@@ -58,11 +58,25 @@ export default function Index() {
         skipEmptyLines: true,
         complete(results) {
           console.log('[CSV] Parsed rows:', results.data.length, 'Fields:', results.meta.fields);
+          console.log('[CSV] First 3 raw rows:', JSON.stringify(results.data.slice(0, 3)));
+          
+          // Show unique Zone_Level values
+          const zoneLevels = new Set(results.data.map(r => r.Zone_Level));
+          console.log('[CSV] Unique Zone_Level values:', Array.from(zoneLevels));
+          
           const parsed = results.data
             .filter(r => r.Event_ID && r.Zone_Level)
             .map(parseEvent)
             .filter(e => !isNaN(e.Trigger_Timestamp.getTime()));
           console.log('[CSV] Valid events:', parsed.length);
+          if (parsed.length > 0) {
+            console.log('[CSV] First event:', JSON.stringify(parsed[0], null, 2));
+            console.log('[CSV] Zone_Level distribution:', 
+              'Warning:', parsed.filter(e => e.Zone_Level === 'Warning').length,
+              'Danger:', parsed.filter(e => e.Zone_Level === 'Danger').length,
+              'Other:', parsed.filter(e => e.Zone_Level !== 'Warning' && e.Zone_Level !== 'Danger').length
+            );
+          }
           setEvents(parsed);
           setLoading(false);
         },
