@@ -1,5 +1,5 @@
 import { ForkliftEvent } from '@/lib/eventTypes';
-import { getDailyAggregates, getCameraAggregates, getHourlyAggregates } from '@/lib/eventStats';
+import { getDailyAggregates, getHourlyAggregates } from '@/lib/eventStats';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, AreaChart, Area
