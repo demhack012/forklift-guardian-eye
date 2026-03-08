@@ -6,6 +6,7 @@ import { ForkliftEvent, ParsedRow, parseEvent } from '@/lib/eventTypes';
 import {
   getTodayStats, getWeekStats, getOverallStats, getFilteredStats,
   formatStopTime, PeriodStatsWithTrend, PeriodStats, generateInsights,
+  SparklinePoint, getHourlySparkline, getDailySparkline, getMonthlySparkline,
 } from '@/lib/eventStats';
 import { KpiCard } from '@/components/KpiCard';
 import { DashboardCharts } from '@/components/DashboardCharts';
