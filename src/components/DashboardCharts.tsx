@@ -124,6 +124,7 @@ function ChartHeader({ title, fromDate, toDate, onFromChange, onToChange, onClea
 }
 
 export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
+  const ct = useChartTheme();
   const [trendFrom, setTrendFrom] = useState<Date | undefined>();
   const [trendTo, setTrendTo] = useState<Date | undefined>();
   const [stopFrom, setStopFrom] = useState<Date | undefined>();
@@ -139,6 +140,15 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
   const dailyStop = getDailyAggregates(stopEvents);
   const hourly = getHourlyAggregates(hourlyEvents);
 
+  const tooltipStyle = {
+    contentStyle: {
+      backgroundColor: ct.tooltipBg,
+      border: `1px solid ${ct.tooltipBorder}`,
+      borderRadius: '8px',
+      color: ct.tooltipText,
+    },
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Daily Trend */}
@@ -146,9 +156,9 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
         <ChartHeader title="Daily Event Trend" fromDate={trendFrom} toDate={trendTo} onFromChange={setTrendFrom} onToChange={setTrendTo} onClear={() => { setTrendFrom(undefined); setTrendTo(undefined); }} />
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={dailyTrend}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 22%)" />
-            <XAxis dataKey="date" tick={{ fill: 'hsl(215, 15%, 55%)', fontSize: 11 }} />
-            <YAxis tick={{ fill: 'hsl(215, 15%, 55%)', fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke={ct.grid} />
+            <XAxis dataKey="date" tick={{ fill: ct.tick, fontSize: 11 }} />
+            <YAxis tick={{ fill: ct.tick, fontSize: 11 }} />
             <Tooltip {...tooltipStyle} />
             <Legend />
             <Line type="monotone" dataKey="warnings" stroke={COLORS.warning} strokeWidth={2} dot={false} />
@@ -162,9 +172,9 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
         <ChartHeader title="Daily Stop Time (seconds)" fromDate={stopFrom} toDate={stopTo} onFromChange={setStopFrom} onToChange={setStopTo} onClear={() => { setStopFrom(undefined); setStopTo(undefined); }} />
         <ResponsiveContainer width="100%" height={280}>
           <AreaChart data={dailyStop}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 22%)" />
-            <XAxis dataKey="date" tick={{ fill: 'hsl(215, 15%, 55%)', fontSize: 11 }} />
-            <YAxis tick={{ fill: 'hsl(215, 15%, 55%)', fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke={ct.grid} />
+            <XAxis dataKey="date" tick={{ fill: ct.tick, fontSize: 11 }} />
+            <YAxis tick={{ fill: ct.tick, fontSize: 11 }} />
             <Tooltip {...tooltipStyle} />
             <Area type="monotone" dataKey="stopTime" stroke={COLORS.stopTime} fill={COLORS.stopTime} fillOpacity={0.2} strokeWidth={2} />
           </AreaChart>
@@ -176,9 +186,9 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
         <ChartHeader title="Hourly Distribution" fromDate={hourlyFrom} toDate={hourlyTo} onFromChange={setHourlyFrom} onToChange={setHourlyTo} onClear={() => { setHourlyFrom(undefined); setHourlyTo(undefined); }} />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={hourly}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 22%)" />
-            <XAxis dataKey="hour" tick={{ fill: 'hsl(215, 15%, 55%)', fontSize: 11 }} />
-            <YAxis tick={{ fill: 'hsl(215, 15%, 55%)', fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke={ct.grid} />
+            <XAxis dataKey="hour" tick={{ fill: ct.tick, fontSize: 11 }} />
+            <YAxis tick={{ fill: ct.tick, fontSize: 11 }} />
             <Tooltip {...tooltipStyle} />
             <Legend />
             <Bar dataKey="warnings" stackId="a" fill={COLORS.warning} radius={[0, 0, 0, 0]} />
