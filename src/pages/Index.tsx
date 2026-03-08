@@ -6,6 +6,7 @@ import { ForkliftEvent, ParsedRow, parseEvent } from '@/lib/eventTypes';
 import {
   getTodayStats, getWeekStats, getOverallStats, getFilteredStats,
   formatStopTime, PeriodStatsWithTrend, PeriodStats, generateInsights,
+  SparklinePoint, getHourlySparkline, getDailySparkline, getMonthlySparkline,
 } from '@/lib/eventStats';
 import { KpiCard } from '@/components/KpiCard';
 import { DashboardCharts } from '@/components/DashboardCharts';
@@ -21,13 +22,15 @@ import {
 const AUTO_REFRESH_INTERVAL = 45_000; // 45 seconds
 
 function StatSection({
-  title, stats, icon, showTrends, trendLabel,
+  title, stats, icon, showTrends, trendLabel, sparklines, sparklineLabel,
 }: {
   title: string;
   stats: PeriodStatsWithTrend | PeriodStats;
   icon: React.ReactNode;
   showTrends?: boolean;
   trendLabel?: string;
+  sparklines?: { warnings: SparklinePoint[]; dangers: SparklinePoint[]; stopTime: SparklinePoint[] };
+  sparklineLabel?: string;
 }) {
   const trends = 'warningsTrend' in stats ? stats : null;
   return (
@@ -44,6 +47,8 @@ function StatSection({
           variant="warning"
           trend={showTrends && trends ? trends.warningsTrend : undefined}
           trendLabel={trendLabel}
+          sparklineData={sparklines?.warnings}
+          sparklineLabel={sparklineLabel}
         />
         <KpiCard
           title="Brake Engagements"
@@ -52,6 +57,8 @@ function StatSection({
           variant="danger"
           trend={showTrends && trends ? trends.dangersTrend : undefined}
           trendLabel={trendLabel}
+          sparklineData={sparklines?.dangers}
+          sparklineLabel={sparklineLabel}
         />
         <KpiCard
           title="Total Stop Time"
@@ -60,6 +67,8 @@ function StatSection({
           variant="info"
           trend={showTrends && trends ? trends.stopTimeTrend : undefined}
           trendLabel={trendLabel}
+          sparklineData={sparklines?.stopTime}
+          sparklineLabel={sparklineLabel}
         />
       </div>
     </div>
@@ -204,6 +213,22 @@ export default function Index() {
   const overall = getOverallStats(filteredEvents);
   const insights = generateInsights(filteredEvents);
 
+  const todaySparklines = {
+    warnings: getHourlySparkline(filteredEvents, 'warnings'),
+    dangers: getHourlySparkline(filteredEvents, 'dangers'),
+    stopTime: getHourlySparkline(filteredEvents, 'stopTime'),
+  };
+  const weekSparklines = {
+    warnings: getDailySparkline(filteredEvents, 'warnings'),
+    dangers: getDailySparkline(filteredEvents, 'dangers'),
+    stopTime: getDailySparkline(filteredEvents, 'stopTime'),
+  };
+  const overallSparklines = {
+    warnings: getMonthlySparkline(filteredEvents, 'warnings'),
+    dangers: getMonthlySparkline(filteredEvents, 'dangers'),
+    stopTime: getMonthlySparkline(filteredEvents, 'stopTime'),
+  };
+
   return (
     <div ref={dashboardRef} className="min-h-screen p-4 sm:p-6 lg:p-8">
       {/* Header */}
@@ -267,9 +292,9 @@ export default function Index() {
 
       {/* KPI Sections */}
       <div className="space-y-6 sm:space-y-8">
-        <StatSection title="Today" stats={today} showTrends trendLabel="vs yesterday" icon={<Activity className="h-4 w-4 text-success" />} />
-        <StatSection title="This Week" stats={week} showTrends trendLabel="vs last week" icon={<Activity className="h-4 w-4 text-info" />} />
-        <StatSection title="Overall" stats={overall} icon={<Activity className="h-4 w-4 text-primary" />} />
+        <StatSection title="Today" stats={today} showTrends trendLabel="vs yesterday" icon={<Activity className="h-4 w-4 text-success" />} sparklines={todaySparklines} sparklineLabel="Last 24 hours" />
+        <StatSection title="This Week" stats={week} showTrends trendLabel="vs last week" icon={<Activity className="h-4 w-4 text-info" />} sparklines={weekSparklines} sparklineLabel="Last 7 days" />
+        <StatSection title="Overall" stats={overall} icon={<Activity className="h-4 w-4 text-primary" />} sparklines={overallSparklines} sparklineLabel="Monthly" />
       </div>
 
       {/* Charts */}
