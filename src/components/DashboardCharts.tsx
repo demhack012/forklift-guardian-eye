@@ -138,9 +138,8 @@ function FullscreenChart({ open, onClose, title, children }: {
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-[95vw] w-[95vw] h-[85vh] flex flex-col p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-          <Button variant="ghost" size="sm" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
         <div className="flex-1 min-h-0">
           {children}
