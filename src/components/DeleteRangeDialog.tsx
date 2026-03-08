@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { CalendarIcon, Trash2 } from 'lucide-react';
+import { CalendarIcon, Trash2, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { ForkliftEvent } from '@/lib/eventTypes';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -19,6 +20,7 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
   const [open, setOpen] = useState(false);
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
+  const [saving, setSaving] = useState(false);
 
   const countToDelete = events.filter(e => {
     if (!fromDate && !toDate) return false;
@@ -31,7 +33,7 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
     return true;
   }).length;
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const remaining = events.filter(e => {
       if (fromDate && e.Trigger_Timestamp < fromDate) return true;
       if (toDate) {
@@ -42,7 +44,7 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
       return false;
     });
 
-    // Generate and download updated CSV
+    // Build CSV content (timestamps in UTC as stored in original CSV)
     const header = 'Event_ID,Trigger_Timestamp,Zone_Level,Stop_Timestamp';
     const rows = remaining.map(e => {
       const trigger = e.Trigger_Timestamp.toISOString().replace('T', ' ').slice(0, 19);
@@ -50,18 +52,30 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
       return `${e.Event_ID},${trigger},${e.Zone_Level},${stop}`;
     });
     const csv = [header, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `events-updated-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
 
-    onDelete(remaining);
-    setOpen(false);
-    setFromDate(undefined);
-    setToDate(undefined);
+    setSaving(true);
+    try {
+      const res = await fetch('/api/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(data.error || `Server returned ${res.status}`);
+      }
+
+      toast({ title: 'CSV updated', description: `${countToDelete} events removed from the file.` });
+      onDelete(remaining);
+      setOpen(false);
+      setFromDate(undefined);
+      setToDate(undefined);
+    } catch (err: any) {
+      toast({ title: 'Failed to update CSV', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -75,7 +89,7 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
         <DialogHeader>
           <DialogTitle>Delete Events by Date Range</DialogTitle>
           <DialogDescription>
-            Select a date range to remove events. The updated CSV will be downloaded automatically.
+            Select a date range to permanently remove events from the CSV file on the server.
           </DialogDescription>
         </DialogHeader>
 
@@ -119,13 +133,13 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
           <Button
             variant="destructive"
-            disabled={countToDelete === 0}
+            disabled={countToDelete === 0 || saving}
             onClick={handleDelete}
           >
-            Delete & Download CSV
+            {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</> : `Delete ${countToDelete} Events`}
           </Button>
         </DialogFooter>
       </DialogContent>
