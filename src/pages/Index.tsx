@@ -200,6 +200,22 @@ export default function Index() {
         <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Historical Analytics</h2>
         <DashboardCharts events={events} />
       </div>
+
+      {/* Footer */}
+      <footer className="mt-12 border-t border-border pt-6 pb-4 text-center text-sm text-muted-foreground">
+        <p className="font-semibold text-foreground">
+          Made by{' '}
+          <a href="https://manex.systems/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            ManEx Systems
+          </a>
+        </p>
+        <p className="mt-1">6th of October City, Egypt</p>
+        <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <a href="tel:+201001510969" className="hover:text-foreground transition-colors">+20 100 1510 969</a>
+          <a href="tel:+971504897143" className="hover:text-foreground transition-colors">+971 50 489 7143</a>
+          <a href="mailto:info@manex.systems" className="hover:text-foreground transition-colors">info@manex.systems</a>
+        </div>
+      </footer>
     </div>
   );
 }
