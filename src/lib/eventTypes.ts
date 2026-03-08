@@ -3,7 +3,6 @@ export interface ForkliftEvent {
   Trigger_Timestamp: Date;
   Zone_Level: 'Warning' | 'Danger';
   Stop_Timestamp: Date | null;
-  Camera_ID: string;
 }
 
 export interface ParsedRow {
@@ -11,7 +10,6 @@ export interface ParsedRow {
   Trigger_Timestamp: string;
   Zone_Level: string;
   Stop_Timestamp: string;
-  Camera_ID: string;
 }
 
 export function parseEvent(row: ParsedRow): ForkliftEvent {
