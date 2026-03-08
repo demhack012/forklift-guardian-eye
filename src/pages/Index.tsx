@@ -8,6 +8,7 @@ import {
 } from '@/lib/eventStats';
 import { KpiCard } from '@/components/KpiCard';
 import { DashboardCharts } from '@/components/DashboardCharts';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   AlertTriangle, OctagonX, Timer, Truck, Activity, Download, RefreshCw, Loader2,
 } from 'lucide-react';
@@ -162,6 +163,7 @@ export default function Index() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <button
             onClick={loadCSV}
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted"
