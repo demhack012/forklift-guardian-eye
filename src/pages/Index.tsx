@@ -22,13 +22,15 @@ import {
 const AUTO_REFRESH_INTERVAL = 45_000; // 45 seconds
 
 function StatSection({
-  title, stats, icon, showTrends, trendLabel,
+  title, stats, icon, showTrends, trendLabel, sparklines, sparklineLabel,
 }: {
   title: string;
   stats: PeriodStatsWithTrend | PeriodStats;
   icon: React.ReactNode;
   showTrends?: boolean;
   trendLabel?: string;
+  sparklines?: { warnings: SparklinePoint[]; dangers: SparklinePoint[]; stopTime: SparklinePoint[] };
+  sparklineLabel?: string;
 }) {
   const trends = 'warningsTrend' in stats ? stats : null;
   return (
@@ -45,6 +47,8 @@ function StatSection({
           variant="warning"
           trend={showTrends && trends ? trends.warningsTrend : undefined}
           trendLabel={trendLabel}
+          sparklineData={sparklines?.warnings}
+          sparklineLabel={sparklineLabel}
         />
         <KpiCard
           title="Brake Engagements"
@@ -53,6 +57,8 @@ function StatSection({
           variant="danger"
           trend={showTrends && trends ? trends.dangersTrend : undefined}
           trendLabel={trendLabel}
+          sparklineData={sparklines?.dangers}
+          sparklineLabel={sparklineLabel}
         />
         <KpiCard
           title="Total Stop Time"
@@ -61,6 +67,8 @@ function StatSection({
           variant="info"
           trend={showTrends && trends ? trends.stopTimeTrend : undefined}
           trendLabel={trendLabel}
+          sparklineData={sparklines?.stopTime}
+          sparklineLabel={sparklineLabel}
         />
       </div>
     </div>
