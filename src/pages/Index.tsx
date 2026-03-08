@@ -8,6 +8,7 @@ import {
 } from '@/lib/eventStats';
 import { KpiCard } from '@/components/KpiCard';
 import { DashboardCharts } from '@/components/DashboardCharts';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   AlertTriangle, OctagonX, Timer, Truck, Activity, Download, RefreshCw, Loader2,
 } from 'lucide-react';
