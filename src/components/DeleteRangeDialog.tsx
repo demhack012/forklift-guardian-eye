@@ -20,6 +20,7 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
   const [open, setOpen] = useState(false);
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
+  const [saving, setSaving] = useState(false);
 
   const countToDelete = events.filter(e => {
     if (!fromDate && !toDate) return false;
@@ -32,7 +33,7 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
     return true;
   }).length;
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const remaining = events.filter(e => {
       if (fromDate && e.Trigger_Timestamp < fromDate) return true;
       if (toDate) {
@@ -43,7 +44,7 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
       return false;
     });
 
-    // Generate and download updated CSV
+    // Build CSV content (timestamps in UTC as stored in original CSV)
     const header = 'Event_ID,Trigger_Timestamp,Zone_Level,Stop_Timestamp';
     const rows = remaining.map(e => {
       const trigger = e.Trigger_Timestamp.toISOString().replace('T', ' ').slice(0, 19);
@@ -51,18 +52,30 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
       return `${e.Event_ID},${trigger},${e.Zone_Level},${stop}`;
     });
     const csv = [header, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `events-updated-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
 
-    onDelete(remaining);
-    setOpen(false);
-    setFromDate(undefined);
-    setToDate(undefined);
+    setSaving(true);
+    try {
+      const res = await fetch('/api/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(data.error || `Server returned ${res.status}`);
+      }
+
+      toast({ title: 'CSV updated', description: `${countToDelete} events removed from the file.` });
+      onDelete(remaining);
+      setOpen(false);
+      setFromDate(undefined);
+      setToDate(undefined);
+    } catch (err: any) {
+      toast({ title: 'Failed to update CSV', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
