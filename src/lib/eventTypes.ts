@@ -18,6 +18,5 @@ export function parseEvent(row: ParsedRow): ForkliftEvent {
     Trigger_Timestamp: new Date(row.Trigger_Timestamp),
     Zone_Level: row.Zone_Level?.trim() as 'Warning' | 'Danger',
     Stop_Timestamp: row.Stop_Timestamp?.trim() ? new Date(row.Stop_Timestamp.trim()) : null,
-    Camera_ID: row.Camera_ID?.trim() || '',
   };
 }

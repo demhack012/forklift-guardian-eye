@@ -75,23 +75,6 @@ export function getDailyAggregates(events: ForkliftEvent[]): DailyData[] {
     .map(([date, data]) => ({ date, ...data }));
 }
 
-export interface CameraData {
-  camera: string;
-  warnings: number;
-  dangers: number;
-}
-
-export function getCameraAggregates(events: ForkliftEvent[]): CameraData[] {
-  const map = new Map<string, { warnings: number; dangers: number }>();
-  for (const e of events) {
-    if (!e.Camera_ID) continue;
-    if (!map.has(e.Camera_ID)) map.set(e.Camera_ID, { warnings: 0, dangers: 0 });
-    const entry = map.get(e.Camera_ID)!;
-    if (e.Zone_Level === 'Warning') entry.warnings++;
-    if (e.Zone_Level === 'Danger') entry.dangers++;
-  }
-  return Array.from(map.entries()).map(([camera, data]) => ({ camera, ...data }));
-}
 
 export interface HourlyData {
   hour: string;
