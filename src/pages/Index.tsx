@@ -54,7 +54,7 @@ export default function Index() {
       
       Papa.parse<ParsedRow>(text, {
         header: true,
-        delimiter: '\t',
+        delimiter: ',',
         skipEmptyLines: true,
         complete(results) {
           console.log('[CSV] Parsed rows:', results.data.length, 'Fields:', results.meta.fields);
