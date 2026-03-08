@@ -292,9 +292,9 @@ export default function Index() {
 
       {/* KPI Sections */}
       <div className="space-y-6 sm:space-y-8">
-        <StatSection title="Today" stats={today} showTrends trendLabel="vs yesterday" icon={<Activity className="h-4 w-4 text-success" />} />
-        <StatSection title="This Week" stats={week} showTrends trendLabel="vs last week" icon={<Activity className="h-4 w-4 text-info" />} />
-        <StatSection title="Overall" stats={overall} icon={<Activity className="h-4 w-4 text-primary" />} />
+        <StatSection title="Today" stats={today} showTrends trendLabel="vs yesterday" icon={<Activity className="h-4 w-4 text-success" />} sparklines={todaySparklines} sparklineLabel="Last 24 hours" />
+        <StatSection title="This Week" stats={week} showTrends trendLabel="vs last week" icon={<Activity className="h-4 w-4 text-info" />} sparklines={weekSparklines} sparklineLabel="Last 7 days" />
+        <StatSection title="Overall" stats={overall} icon={<Activity className="h-4 w-4 text-primary" />} sparklines={overallSparklines} sparklineLabel="Monthly" />
       </div>
 
       {/* Charts */}
