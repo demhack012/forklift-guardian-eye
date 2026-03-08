@@ -133,13 +133,13 @@ export function DeleteRangeDialog({ events, onDelete }: DeleteRangeDialogProps) 
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
           <Button
             variant="destructive"
-            disabled={countToDelete === 0}
+            disabled={countToDelete === 0 || saving}
             onClick={handleDelete}
           >
-            Delete & Download CSV
+            {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</> : `Delete ${countToDelete} Events`}
           </Button>
         </DialogFooter>
       </DialogContent>
