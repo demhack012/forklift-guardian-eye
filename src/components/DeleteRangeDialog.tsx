@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { CalendarIcon, Trash2 } from 'lucide-react';
+import { CalendarIcon, Trash2, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { ForkliftEvent } from '@/lib/eventTypes';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
