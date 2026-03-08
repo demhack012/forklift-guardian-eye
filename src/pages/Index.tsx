@@ -40,24 +40,35 @@ export default function Index() {
   const loadCSV = useCallback(async () => {
     setLoading(true);
     setError(null);
+    console.log('[CSV] Fetching from:', CSV_URL);
     try {
       const res = await fetch(CSV_URL);
+      console.log('[CSV] Response status:', res.status, 'Content-Type:', res.headers.get('content-type'));
       if (!res.ok) throw new Error('Could not load events.csv');
       const text = await res.text();
+      console.log('[CSV] Response length:', text.length, 'First 200 chars:', text.substring(0, 200));
+      
+      if (text.startsWith('<!doctype') || text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+        throw new Error('Got HTML instead of CSV — file not found at /data/events.csv. Place the CSV in public/data/events.csv');
+      }
+      
       Papa.parse<ParsedRow>(text, {
         header: true,
         delimiter: '\t',
         skipEmptyLines: true,
         complete(results) {
+          console.log('[CSV] Parsed rows:', results.data.length, 'Fields:', results.meta.fields);
           const parsed = results.data
             .filter(r => r.Event_ID && r.Zone_Level)
             .map(parseEvent)
             .filter(e => !isNaN(e.Trigger_Timestamp.getTime()));
+          console.log('[CSV] Valid events:', parsed.length);
           setEvents(parsed);
           setLoading(false);
         },
       });
     } catch (err: any) {
+      console.error('[CSV] Error:', err.message);
       setError(err.message);
       setLoading(false);
     }
