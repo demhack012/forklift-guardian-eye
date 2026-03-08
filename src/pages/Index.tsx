@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Papa from 'papaparse';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { ForkliftEvent, ParsedRow, parseEvent } from '@/lib/eventTypes';
 import {
   getTodayStats, getWeekStats, getOverallStats, formatStopTime, PeriodStats,
@@ -7,7 +9,7 @@ import {
 import { KpiCard } from '@/components/KpiCard';
 import { DashboardCharts } from '@/components/DashboardCharts';
 import {
-  AlertTriangle, OctagonX, Timer, Upload, Truck, Activity,
+  AlertTriangle, OctagonX, Timer, Truck, Activity, Download, RefreshCw, Loader2,
 } from 'lucide-react';
 
 function StatSection({ title, stats, icon }: { title: string; stats: PeriodStats; icon: React.ReactNode }) {
@@ -26,58 +28,92 @@ function StatSection({ title, stats, icon }: { title: string; stats: PeriodStats
   );
 }
 
+const CSV_URL = '/data/events.csv';
+
 export default function Index() {
   const [events, setEvents] = useState<ForkliftEvent[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
-  const handleFile = useCallback((file: File) => {
-    Papa.parse<ParsedRow>(file, {
-      header: true,
-      delimiter: '\t',
-      skipEmptyLines: true,
-      complete(results) {
-        const parsed = results.data
-          .filter(r => r.Event_ID && r.Zone_Level)
-          .map(parseEvent)
-          .filter(e => !isNaN(e.Trigger_Timestamp.getTime()));
-        setEvents(parsed);
-        setLoaded(true);
-      },
-    });
+  const loadCSV = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(CSV_URL);
+      if (!res.ok) throw new Error('Could not load events.csv');
+      const text = await res.text();
+      Papa.parse<ParsedRow>(text, {
+        header: true,
+        delimiter: '\t',
+        skipEmptyLines: true,
+        complete(results) {
+          const parsed = results.data
+            .filter(r => r.Event_ID && r.Zone_Level)
+            .map(parseEvent)
+            .filter(e => !isNaN(e.Trigger_Timestamp.getTime()));
+          setEvents(parsed);
+          setLoading(false);
+        },
+      });
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+    }
   }, []);
 
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
+  useEffect(() => {
+    loadCSV();
+  }, [loadCSV]);
 
-  if (!loaded) {
+  const exportPDF = async () => {
+    if (!dashboardRef.current) return;
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(dashboardRef.current, {
+        backgroundColor: '#161b26',
+        scale: 2,
+        useCORS: true,
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`forklift-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch {
+      console.error('PDF export failed');
+    }
+    setExporting(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm">Loading events data…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
-        <div
-          onDragOver={e => e.preventDefault()}
-          onDrop={onDrop}
-          className="flex w-full max-w-lg flex-col items-center gap-6 rounded-2xl border-2 border-dashed border-primary/40 bg-card p-12 text-center transition-colors hover:border-primary/70"
-        >
-          <div className="rounded-full bg-primary/10 p-5">
-            <Truck className="h-12 w-12 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Forklift Safety Dashboard</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Upload your events.csv to get started</p>
-          </div>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground transition-transform hover:scale-105">
-            <Upload className="h-4 w-4" />
-            Select CSV File
-            <input
-              type="file"
-              accept=".csv,.tsv,.txt"
-              className="hidden"
-              onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
-            />
-          </label>
-          <p className="text-xs text-muted-foreground">or drag & drop here</p>
+        <div className="flex flex-col items-center gap-4 rounded-xl border border-danger/30 bg-card p-10 text-center">
+          <AlertTriangle className="h-10 w-10 text-danger" />
+          <p className="text-foreground">Failed to load CSV</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <button
+            onClick={loadCSV}
+            className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            <RefreshCw className="h-4 w-4" /> Retry
+          </button>
         </div>
       </div>
     );
@@ -88,7 +124,7 @@ export default function Index() {
   const overall = getOverallStats(events);
 
   return (
-    <div className="min-h-screen p-6 lg:p-8">
+    <div ref={dashboardRef} className="min-h-screen p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -100,18 +136,22 @@ export default function Index() {
             <p className="text-xs text-muted-foreground">{events.length.toLocaleString()} events loaded</p>
           </div>
         </div>
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted">
-          <Upload className="h-4 w-4" />
-          Load New CSV
-          <input
-            type="file"
-            accept=".csv,.tsv,.txt"
-            className="hidden"
-            onChange={e => {
-              if (e.target.files?.[0]) handleFile(e.target.files[0]);
-            }}
-          />
-        </label>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={loadCSV}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted"
+          >
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </button>
+          <button
+            onClick={exportPDF}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:scale-105 disabled:opacity-50"
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {exporting ? 'Exporting…' : 'Download PDF'}
+          </button>
+        </div>
       </div>
 
       {/* KPI Sections */}
