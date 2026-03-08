@@ -213,6 +213,22 @@ export default function Index() {
   const overall = getOverallStats(filteredEvents);
   const insights = generateInsights(filteredEvents);
 
+  const todaySparklines = {
+    warnings: getHourlySparkline(filteredEvents, 'warnings'),
+    dangers: getHourlySparkline(filteredEvents, 'dangers'),
+    stopTime: getHourlySparkline(filteredEvents, 'stopTime'),
+  };
+  const weekSparklines = {
+    warnings: getDailySparkline(filteredEvents, 'warnings'),
+    dangers: getDailySparkline(filteredEvents, 'dangers'),
+    stopTime: getDailySparkline(filteredEvents, 'stopTime'),
+  };
+  const overallSparklines = {
+    warnings: getMonthlySparkline(filteredEvents, 'warnings'),
+    dangers: getMonthlySparkline(filteredEvents, 'dangers'),
+    stopTime: getMonthlySparkline(filteredEvents, 'stopTime'),
+  };
+
   return (
     <div ref={dashboardRef} className="min-h-screen p-4 sm:p-6 lg:p-8">
       {/* Header */}
