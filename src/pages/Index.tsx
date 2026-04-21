@@ -15,7 +15,7 @@ import { InsightsPanel } from '@/components/InsightsPanel';
 import { GlobalDateFilter } from '@/components/GlobalDateFilter';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
-  AlertTriangle, OctagonX, Timer, Truck, Activity, Download,
+  AlertTriangle, OctagonX, Timer, Truck, Activity, Download, Hourglass,
   RefreshCw, Loader2, Globe, Clock,
 } from 'lucide-react';
 
