@@ -109,20 +109,19 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-24"><SortButton col="Event_ID" label="ID" /></TableHead>
+              <TableHead className="w-36"><SortButton col="Camera_ID" label="Camera" /></TableHead>
               <TableHead><SortButton col="Trigger_Timestamp" label="Trigger Time" /></TableHead>
               <TableHead className="w-28"><SortButton col="Zone_Level" label="Zone" /></TableHead>
-              <TableHead><SortButton col="Stop_Timestamp" label="Stop Time" /></TableHead>
-              <TableHead className="w-24 text-right">Duration</TableHead>
+              <TableHead className="w-28 text-right"><SortButton col="Duration_Sec" label="Duration" /></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {pageData.map(e => {
-              const duration = e.Zone_Level === 'Danger' && e.Stop_Timestamp
-                ? formatStopTime(Math.abs(Math.round((e.Stop_Timestamp.getTime() - e.Trigger_Timestamp.getTime()) / 1000)))
-                : '—';
+              const duration = e.Duration_Sec > 0 ? formatStopTime(Math.round(e.Duration_Sec)) : '—';
               return (
                 <TableRow key={e.Event_ID}>
                   <TableCell className="font-mono text-xs">{e.Event_ID}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{e.Camera_ID || '—'}</TableCell>
                   <TableCell className="text-xs">{format(e.Trigger_Timestamp, 'yyyy-MM-dd HH:mm:ss')}</TableCell>
                   <TableCell>
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -132,9 +131,6 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
                     }`}>
                       {e.Zone_Level}
                     </span>
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {e.Stop_Timestamp ? format(e.Stop_Timestamp, 'yyyy-MM-dd HH:mm:ss') : '—'}
                   </TableCell>
                   <TableCell className="text-right text-xs font-mono">{duration}</TableCell>
                 </TableRow>
