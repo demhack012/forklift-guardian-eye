@@ -88,6 +88,7 @@ export interface DailyData {
   warnings: number;
   dangers: number;
   stopTime: number;
+  warningTime: number;
   warningsMA7?: number;
   warningsMA30?: number;
   dangersMA7?: number;
@@ -109,18 +110,19 @@ function addMovingAverages(data: DailyData[]): DailyData[] {
 }
 
 export function getDailyAggregates(events: ForkliftEvent[]): DailyData[] {
-  const map = new Map<string, { warnings: number; dangers: number; stopTime: number }>();
+  const map = new Map<string, { warnings: number; dangers: number; stopTime: number; warningTime: number }>();
 
   for (const e of events) {
     const date = e.Trigger_Timestamp.toISOString().slice(0, 10);
-    if (!map.has(date)) map.set(date, { warnings: 0, dangers: 0, stopTime: 0 });
+    if (!map.has(date)) map.set(date, { warnings: 0, dangers: 0, stopTime: 0, warningTime: 0 });
     const entry = map.get(date)!;
-    if (e.Zone_Level === 'Warning') entry.warnings++;
+    if (e.Zone_Level === 'Warning') {
+      entry.warnings++;
+      entry.warningTime += e.Duration_Sec || 0;
+    }
     if (e.Zone_Level === 'Danger') {
       entry.dangers++;
-      if (e.Stop_Timestamp) {
-        entry.stopTime += Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp));
-      }
+      entry.stopTime += e.Duration_Sec || 0;
     }
   }
 
