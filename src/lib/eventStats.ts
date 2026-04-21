@@ -280,3 +280,32 @@ export function generateInsights(events: ForkliftEvent[]): string[] {
 
   return insights;
 }
+
+export interface CameraData {
+  camera: string;
+  warnings: number;
+  dangers: number;
+  total: number;
+  warningTime: number;
+  stopTime: number;
+}
+
+export function getCameraAggregates(events: ForkliftEvent[]): CameraData[] {
+  const map = new Map<string, CameraData>();
+  for (const e of events) {
+    const key = e.Camera_ID || 'Unknown';
+    if (!map.has(key)) {
+      map.set(key, { camera: key, warnings: 0, dangers: 0, total: 0, warningTime: 0, stopTime: 0 });
+    }
+    const c = map.get(key)!;
+    c.total++;
+    if (e.Zone_Level === 'Warning') {
+      c.warnings++;
+      c.warningTime += e.Duration_Sec || 0;
+    } else if (e.Zone_Level === 'Danger') {
+      c.dangers++;
+      c.stopTime += e.Duration_Sec || 0;
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total);
+}
