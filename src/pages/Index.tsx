@@ -29,7 +29,7 @@ function StatSection({
   icon: React.ReactNode;
   showTrends?: boolean;
   trendLabel?: string;
-  sparklines?: { warnings: SparklinePoint[]; dangers: SparklinePoint[]; stopTime: SparklinePoint[] };
+  sparklines?: { warnings: SparklinePoint[]; dangers: SparklinePoint[]; stopTime: SparklinePoint[]; warningTime: SparklinePoint[] };
   sparklineLabel?: string;
 }) {
   const trends = 'warningsTrend' in stats ? stats : null;
@@ -39,7 +39,7 @@ function StatSection({
         {icon}
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
       </div>
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           title="Warnings"
           value={stats.warnings}
@@ -48,6 +48,16 @@ function StatSection({
           trend={showTrends && trends ? trends.warningsTrend : undefined}
           trendLabel={trendLabel}
           sparklineData={sparklines?.warnings}
+          sparklineLabel={sparklineLabel}
+        />
+        <KpiCard
+          title="Total Warning Time"
+          value={formatStopTime(stats.totalWarningTimeSeconds)}
+          icon={Hourglass}
+          variant="warning"
+          trend={showTrends && trends ? trends.warningTimeTrend : undefined}
+          trendLabel={trendLabel}
+          sparklineData={sparklines?.warningTime}
           sparklineLabel={sparklineLabel}
         />
         <KpiCard
