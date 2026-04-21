@@ -57,11 +57,10 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
   };
 
   const exportFilteredCSV = () => {
-    const header = 'Event_ID,Trigger_Timestamp,Zone_Level,Stop_Timestamp';
+    const header = 'Event_ID,Camera_ID,Trigger_Timestamp,Zone_Level,Duration_Sec';
     const rows = sorted.map(e => {
       const trigger = e.Trigger_Timestamp.toISOString().replace('T', ' ').slice(0, 19);
-      const stop = e.Stop_Timestamp ? e.Stop_Timestamp.toISOString().replace('T', ' ').slice(0, 19) : '';
-      return `${e.Event_ID},${trigger},${e.Zone_Level},${stop}`;
+      return `${e.Event_ID},${e.Camera_ID},${trigger},${e.Zone_Level},${e.Duration_Sec.toFixed(2)}`;
     });
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
