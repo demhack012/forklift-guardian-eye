@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ export function GlobalDateFilter({ events, onFilter }: GlobalDateFilterProps) {
   const [toDate, setToDate] = useState<Date | undefined>();
   const isFiltered = fromDate || toDate;
 
-  useMemo(() => {
+  useEffect(() => {
     if (!fromDate && !toDate) {
       onFilter(events);
       return;
