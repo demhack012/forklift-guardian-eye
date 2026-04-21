@@ -228,6 +228,20 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
     </ResponsiveContainer>
   );
 
+  const renderCameraChart = (height: number) => (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={cameras} layout="vertical" margin={{ left: 24 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={ct.grid} horizontal={false} />
+        <XAxis type="number" tick={{ fill: ct.tick, fontSize: 11 }} />
+        <YAxis type="category" dataKey="camera" tick={{ fill: ct.tick, fontSize: 11 }} width={120} />
+        <Tooltip {...tooltipStyle} />
+        <Legend />
+        <Bar dataKey="warnings" stackId="a" name="Warnings" fill={COLORS.warning} radius={[0, 0, 0, 0]} />
+        <Bar dataKey="dangers" stackId="a" name="Brake Engagements" fill={COLORS.danger} radius={[0, 4, 4, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
   return (
     <>
       <div className="grid gap-6 lg:grid-cols-2">
@@ -248,6 +262,14 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
           <ChartHeader title="Hourly Distribution (peaks highlighted)" fromDate={hourlyFrom} toDate={hourlyTo} onFromChange={setHourlyFrom} onToChange={setHourlyTo} onClear={() => { setHourlyFrom(undefined); setHourlyTo(undefined); }} onFullscreen={() => setFullscreen('hourly')} />
           {renderHourlyChart(280)}
         </div>
+
+        {/* Camera Comparison */}
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+          <ChartHeader title="Events by Camera" fromDate={camFrom} toDate={camTo} onFromChange={setCamFrom} onToChange={setCamTo} onClear={() => { setCamFrom(undefined); setCamTo(undefined); }} onFullscreen={() => setFullscreen('camera')} />
+          {cameras.length > 0
+            ? renderCameraChart(Math.max(280, cameras.length * 36 + 60))
+            : <p className="text-sm text-muted-foreground py-12 text-center">No camera data</p>}
+        </div>
       </div>
 
       {/* Full-screen modals */}
@@ -259,6 +281,9 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
       </FullscreenChart>
       <FullscreenChart open={fullscreen === 'hourly'} onClose={() => setFullscreen(null)} title="Hourly Distribution">
         {renderHourlyChart(600)}
+      </FullscreenChart>
+      <FullscreenChart open={fullscreen === 'camera'} onClose={() => setFullscreen(null)} title="Events by Camera">
+        {renderCameraChart(600)}
       </FullscreenChart>
     </>
   );
