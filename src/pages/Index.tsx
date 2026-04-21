@@ -227,16 +227,19 @@ export default function Index() {
     warnings: getHourlySparkline(filteredEvents, 'warnings'),
     dangers: getHourlySparkline(filteredEvents, 'dangers'),
     stopTime: getHourlySparkline(filteredEvents, 'stopTime'),
+    warningTime: getHourlySparkline(filteredEvents, 'warningTime'),
   };
   const weekSparklines = {
     warnings: getDailySparkline(filteredEvents, 'warnings'),
     dangers: getDailySparkline(filteredEvents, 'dangers'),
     stopTime: getDailySparkline(filteredEvents, 'stopTime'),
+    warningTime: getDailySparkline(filteredEvents, 'warningTime'),
   };
   const overallSparklines = {
     warnings: getMonthlySparkline(filteredEvents, 'warnings'),
     dangers: getMonthlySparkline(filteredEvents, 'dangers'),
     stopTime: getMonthlySparkline(filteredEvents, 'stopTime'),
+    warningTime: getMonthlySparkline(filteredEvents, 'warningTime'),
   };
 
   return (
