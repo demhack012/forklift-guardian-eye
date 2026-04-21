@@ -1,15 +1,17 @@
 export interface ForkliftEvent {
   Event_ID: number;
+  Camera_ID: string;
   Trigger_Timestamp: Date;
   Zone_Level: 'Warning' | 'Danger';
-  Stop_Timestamp: Date | null;
+  Duration_Sec: number;
 }
 
 export interface ParsedRow {
   Event_ID: string;
+  Camera_ID: string;
   Trigger_Timestamp: string;
   Zone_Level: string;
-  Stop_Timestamp: string;
+  Duration_Sec: string;
 }
 
 function parseUTCDate(dateStr: string): Date {
@@ -20,10 +22,12 @@ function parseUTCDate(dateStr: string): Date {
 }
 
 export function parseEvent(row: ParsedRow): ForkliftEvent {
+  const dur = parseFloat(row.Duration_Sec);
   return {
     Event_ID: parseInt(row.Event_ID, 10),
+    Camera_ID: (row.Camera_ID ?? '').trim(),
     Trigger_Timestamp: parseUTCDate(row.Trigger_Timestamp),
     Zone_Level: row.Zone_Level?.trim() as 'Warning' | 'Danger',
-    Stop_Timestamp: row.Stop_Timestamp?.trim() ? parseUTCDate(row.Stop_Timestamp) : null,
+    Duration_Sec: isNaN(dur) ? 0 : dur,
   };
 }
