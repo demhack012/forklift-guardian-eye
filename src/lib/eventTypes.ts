@@ -23,11 +23,13 @@ function parseUTCDate(dateStr: string): Date {
 
 export function parseEvent(row: ParsedRow): ForkliftEvent {
   const dur = parseFloat(row.Duration_Sec);
+  const zoneRaw = (row.Zone_Level ?? '').trim().toLowerCase();
+  const zone: 'Warning' | 'Danger' = zoneRaw === 'danger' ? 'Danger' : 'Warning';
   return {
     Event_ID: parseInt(row.Event_ID, 10),
     Camera_ID: (row.Camera_ID ?? '').trim(),
     Trigger_Timestamp: parseUTCDate(row.Trigger_Timestamp),
-    Zone_Level: row.Zone_Level?.trim() as 'Warning' | 'Danger',
+    Zone_Level: zone,
     Duration_Sec: isNaN(dur) ? 0 : dur,
   };
 }
