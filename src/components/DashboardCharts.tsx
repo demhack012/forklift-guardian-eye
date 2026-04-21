@@ -199,7 +199,9 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
         <XAxis dataKey="date" tick={{ fill: ct.tick, fontSize: 11 }} />
         <YAxis tick={{ fill: ct.tick, fontSize: 11 }} />
         <Tooltip {...tooltipStyle} />
-        <Area type="monotone" dataKey="stopTime" stroke={COLORS.stopTime} fill={COLORS.stopTime} fillOpacity={0.2} strokeWidth={2} />
+        <Legend />
+        <Area type="monotone" name="Warning Time (s)" dataKey="warningTime" stroke={COLORS.warning} fill={COLORS.warning} fillOpacity={0.2} strokeWidth={2} />
+        <Area type="monotone" name="Stop Time (s)" dataKey="stopTime" stroke={COLORS.danger} fill={COLORS.danger} fillOpacity={0.25} strokeWidth={2} />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -233,7 +235,7 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
 
         {/* Daily Stop Time */}
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-          <ChartHeader title="Daily Stop Time (seconds)" fromDate={stopFrom} toDate={stopTo} onFromChange={setStopFrom} onToChange={setStopTo} onClear={() => { setStopFrom(undefined); setStopTo(undefined); }} onFullscreen={() => setFullscreen('stop')} />
+          <ChartHeader title="Daily Warning & Stop Time (seconds)" fromDate={stopFrom} toDate={stopTo} onFromChange={setStopFrom} onToChange={setStopTo} onClear={() => { setStopFrom(undefined); setStopTo(undefined); }} onFullscreen={() => setFullscreen('stop')} />
           {renderStopChart(280)}
         </div>
 
@@ -248,7 +250,7 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
       <FullscreenChart open={fullscreen === 'trend'} onClose={() => setFullscreen(null)} title="Daily Event Trend">
         {renderTrendChart(600)}
       </FullscreenChart>
-      <FullscreenChart open={fullscreen === 'stop'} onClose={() => setFullscreen(null)} title="Daily Stop Time">
+      <FullscreenChart open={fullscreen === 'stop'} onClose={() => setFullscreen(null)} title="Daily Warning & Stop Time">
         {renderStopChart(600)}
       </FullscreenChart>
       <FullscreenChart open={fullscreen === 'hourly'} onClose={() => setFullscreen(null)} title="Hourly Distribution">

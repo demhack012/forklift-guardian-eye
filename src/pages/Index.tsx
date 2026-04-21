@@ -15,7 +15,7 @@ import { InsightsPanel } from '@/components/InsightsPanel';
 import { GlobalDateFilter } from '@/components/GlobalDateFilter';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
-  AlertTriangle, OctagonX, Timer, Truck, Activity, Download,
+  AlertTriangle, OctagonX, Timer, Truck, Activity, Download, Hourglass,
   RefreshCw, Loader2, Globe, Clock,
 } from 'lucide-react';
 
@@ -29,7 +29,7 @@ function StatSection({
   icon: React.ReactNode;
   showTrends?: boolean;
   trendLabel?: string;
-  sparklines?: { warnings: SparklinePoint[]; dangers: SparklinePoint[]; stopTime: SparklinePoint[] };
+  sparklines?: { warnings: SparklinePoint[]; dangers: SparklinePoint[]; stopTime: SparklinePoint[]; warningTime: SparklinePoint[] };
   sparklineLabel?: string;
 }) {
   const trends = 'warningsTrend' in stats ? stats : null;
@@ -39,7 +39,7 @@ function StatSection({
         {icon}
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
       </div>
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           title="Warnings"
           value={stats.warnings}
@@ -48,6 +48,16 @@ function StatSection({
           trend={showTrends && trends ? trends.warningsTrend : undefined}
           trendLabel={trendLabel}
           sparklineData={sparklines?.warnings}
+          sparklineLabel={sparklineLabel}
+        />
+        <KpiCard
+          title="Total Warning Time"
+          value={formatStopTime(stats.totalWarningTimeSeconds)}
+          icon={Hourglass}
+          variant="warning"
+          trend={showTrends && trends ? trends.warningTimeTrend : undefined}
+          trendLabel={trendLabel}
+          sparklineData={sparklines?.warningTime}
           sparklineLabel={sparklineLabel}
         />
         <KpiCard
@@ -217,16 +227,19 @@ export default function Index() {
     warnings: getHourlySparkline(filteredEvents, 'warnings'),
     dangers: getHourlySparkline(filteredEvents, 'dangers'),
     stopTime: getHourlySparkline(filteredEvents, 'stopTime'),
+    warningTime: getHourlySparkline(filteredEvents, 'warningTime'),
   };
   const weekSparklines = {
     warnings: getDailySparkline(filteredEvents, 'warnings'),
     dangers: getDailySparkline(filteredEvents, 'dangers'),
     stopTime: getDailySparkline(filteredEvents, 'stopTime'),
+    warningTime: getDailySparkline(filteredEvents, 'warningTime'),
   };
   const overallSparklines = {
     warnings: getMonthlySparkline(filteredEvents, 'warnings'),
     dangers: getMonthlySparkline(filteredEvents, 'dangers'),
     stopTime: getMonthlySparkline(filteredEvents, 'stopTime'),
+    warningTime: getMonthlySparkline(filteredEvents, 'warningTime'),
   };
 
   return (

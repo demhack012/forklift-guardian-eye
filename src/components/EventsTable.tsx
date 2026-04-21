@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { ArrowUpDown, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
-type SortKey = 'Event_ID' | 'Trigger_Timestamp' | 'Zone_Level' | 'Stop_Timestamp';
+type SortKey = 'Event_ID' | 'Trigger_Timestamp' | 'Zone_Level' | 'Camera_ID' | 'Duration_Sec';
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 15;
@@ -27,6 +27,7 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
       return (
         e.Event_ID.toString().includes(q) ||
         e.Zone_Level.toLowerCase().includes(q) ||
+        e.Camera_ID.toLowerCase().includes(q) ||
         format(e.Trigger_Timestamp, 'yyyy-MM-dd HH:mm:ss').includes(q)
       );
     });
@@ -39,8 +40,8 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
         case 'Event_ID': cmp = a.Event_ID - b.Event_ID; break;
         case 'Trigger_Timestamp': cmp = a.Trigger_Timestamp.getTime() - b.Trigger_Timestamp.getTime(); break;
         case 'Zone_Level': cmp = a.Zone_Level.localeCompare(b.Zone_Level); break;
-        case 'Stop_Timestamp':
-          cmp = (a.Stop_Timestamp?.getTime() || 0) - (b.Stop_Timestamp?.getTime() || 0); break;
+        case 'Camera_ID': cmp = a.Camera_ID.localeCompare(b.Camera_ID); break;
+        case 'Duration_Sec': cmp = a.Duration_Sec - b.Duration_Sec; break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -56,11 +57,10 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
   };
 
   const exportFilteredCSV = () => {
-    const header = 'Event_ID,Trigger_Timestamp,Zone_Level,Stop_Timestamp';
+    const header = 'Event_ID,Camera_ID,Trigger_Timestamp,Zone_Level,Duration_Sec';
     const rows = sorted.map(e => {
       const trigger = e.Trigger_Timestamp.toISOString().replace('T', ' ').slice(0, 19);
-      const stop = e.Stop_Timestamp ? e.Stop_Timestamp.toISOString().replace('T', ' ').slice(0, 19) : '';
-      return `${e.Event_ID},${trigger},${e.Zone_Level},${stop}`;
+      return `${e.Event_ID},${e.Camera_ID},${trigger},${e.Zone_Level},${e.Duration_Sec.toFixed(2)}`;
     });
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -109,20 +109,19 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-24"><SortButton col="Event_ID" label="ID" /></TableHead>
+              <TableHead className="w-36"><SortButton col="Camera_ID" label="Camera" /></TableHead>
               <TableHead><SortButton col="Trigger_Timestamp" label="Trigger Time" /></TableHead>
               <TableHead className="w-28"><SortButton col="Zone_Level" label="Zone" /></TableHead>
-              <TableHead><SortButton col="Stop_Timestamp" label="Stop Time" /></TableHead>
-              <TableHead className="w-24 text-right">Duration</TableHead>
+              <TableHead className="w-28 text-right"><SortButton col="Duration_Sec" label="Duration" /></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {pageData.map(e => {
-              const duration = e.Zone_Level === 'Danger' && e.Stop_Timestamp
-                ? formatStopTime(Math.abs(Math.round((e.Stop_Timestamp.getTime() - e.Trigger_Timestamp.getTime()) / 1000)))
-                : '—';
+              const duration = e.Duration_Sec > 0 ? formatStopTime(Math.round(e.Duration_Sec)) : '—';
               return (
                 <TableRow key={e.Event_ID}>
                   <TableCell className="font-mono text-xs">{e.Event_ID}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{e.Camera_ID || '—'}</TableCell>
                   <TableCell className="text-xs">{format(e.Trigger_Timestamp, 'yyyy-MM-dd HH:mm:ss')}</TableCell>
                   <TableCell>
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -132,9 +131,6 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
                     }`}>
                       {e.Zone_Level}
                     </span>
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {e.Stop_Timestamp ? format(e.Stop_Timestamp, 'yyyy-MM-dd HH:mm:ss') : '—'}
                   </TableCell>
                   <TableCell className="text-right text-xs font-mono">{duration}</TableCell>
                 </TableRow>

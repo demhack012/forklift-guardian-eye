@@ -5,30 +5,34 @@ export interface PeriodStats {
   warnings: number;
   dangers: number;
   totalStopTimeSeconds: number;
+  totalWarningTimeSeconds: number;
 }
 
 export interface PeriodStatsWithTrend extends PeriodStats {
   warningsTrend: number | null;
   dangersTrend: number | null;
   stopTimeTrend: number | null;
+  warningTimeTrend: number | null;
 }
 
 function calcStats(events: ForkliftEvent[]): PeriodStats {
   let warnings = 0;
   let dangers = 0;
   let totalStopTimeSeconds = 0;
+  let totalWarningTimeSeconds = 0;
 
   for (const e of events) {
-    if (e.Zone_Level === 'Warning') warnings++;
+    if (e.Zone_Level === 'Warning') {
+      warnings++;
+      totalWarningTimeSeconds += e.Duration_Sec || 0;
+    }
     if (e.Zone_Level === 'Danger') {
       dangers++;
-      if (e.Stop_Timestamp) {
-        totalStopTimeSeconds += Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp));
-      }
+      totalStopTimeSeconds += e.Duration_Sec || 0;
     }
   }
 
-  return { warnings, dangers, totalStopTimeSeconds };
+  return { warnings, dangers, totalStopTimeSeconds, totalWarningTimeSeconds };
 }
 
 function calcTrend(current: number, previous: number): number | null {
@@ -42,6 +46,7 @@ function withTrend(current: PeriodStats, previous: PeriodStats): PeriodStatsWith
     warningsTrend: calcTrend(current.warnings, previous.warnings),
     dangersTrend: calcTrend(current.dangers, previous.dangers),
     stopTimeTrend: calcTrend(current.totalStopTimeSeconds, previous.totalStopTimeSeconds),
+    warningTimeTrend: calcTrend(current.totalWarningTimeSeconds, previous.totalWarningTimeSeconds),
   };
 }
 
@@ -63,7 +68,7 @@ export function getWeekStats(events: ForkliftEvent[]): PeriodStatsWithTrend {
 
 export function getOverallStats(events: ForkliftEvent[]): PeriodStatsWithTrend {
   const stats = calcStats(events);
-  return { ...stats, warningsTrend: null, dangersTrend: null, stopTimeTrend: null };
+  return { ...stats, warningsTrend: null, dangersTrend: null, stopTimeTrend: null, warningTimeTrend: null };
 }
 
 export function getFilteredStats(events: ForkliftEvent[]): PeriodStats {
@@ -83,6 +88,7 @@ export interface DailyData {
   warnings: number;
   dangers: number;
   stopTime: number;
+  warningTime: number;
   warningsMA7?: number;
   warningsMA30?: number;
   dangersMA7?: number;
@@ -104,18 +110,19 @@ function addMovingAverages(data: DailyData[]): DailyData[] {
 }
 
 export function getDailyAggregates(events: ForkliftEvent[]): DailyData[] {
-  const map = new Map<string, { warnings: number; dangers: number; stopTime: number }>();
+  const map = new Map<string, { warnings: number; dangers: number; stopTime: number; warningTime: number }>();
 
   for (const e of events) {
     const date = e.Trigger_Timestamp.toISOString().slice(0, 10);
-    if (!map.has(date)) map.set(date, { warnings: 0, dangers: 0, stopTime: 0 });
+    if (!map.has(date)) map.set(date, { warnings: 0, dangers: 0, stopTime: 0, warningTime: 0 });
     const entry = map.get(date)!;
-    if (e.Zone_Level === 'Warning') entry.warnings++;
+    if (e.Zone_Level === 'Warning') {
+      entry.warnings++;
+      entry.warningTime += e.Duration_Sec || 0;
+    }
     if (e.Zone_Level === 'Danger') {
       entry.dangers++;
-      if (e.Stop_Timestamp) {
-        entry.stopTime += Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp));
-      }
+      entry.stopTime += e.Duration_Sec || 0;
     }
   }
 
@@ -171,7 +178,9 @@ export interface SparklinePoint {
 }
 
 /** Last 24 hours, one point per hour */
-export function getHourlySparkline(events: ForkliftEvent[], metric: 'warnings' | 'dangers' | 'stopTime'): SparklinePoint[] {
+export type SparklineMetric = 'warnings' | 'dangers' | 'stopTime' | 'warningTime';
+
+export function getHourlySparkline(events: ForkliftEvent[], metric: SparklineMetric): SparklinePoint[] {
   const now = new Date();
   const points: SparklinePoint[] = [];
   for (let i = 23; i >= 0; i--) {
@@ -185,9 +194,8 @@ export function getHourlySparkline(events: ForkliftEvent[], metric: 'warnings' |
       if (e.Trigger_Timestamp >= hourStart && e.Trigger_Timestamp < hourEnd) {
         if (metric === 'warnings' && e.Zone_Level === 'Warning') value++;
         if (metric === 'dangers' && e.Zone_Level === 'Danger') value++;
-        if (metric === 'stopTime' && e.Zone_Level === 'Danger' && e.Stop_Timestamp) {
-          value += Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp));
-        }
+        if (metric === 'stopTime' && e.Zone_Level === 'Danger') value += e.Duration_Sec || 0;
+        if (metric === 'warningTime' && e.Zone_Level === 'Warning') value += e.Duration_Sec || 0;
       }
     }
     points.push({ label, value });
@@ -196,7 +204,7 @@ export function getHourlySparkline(events: ForkliftEvent[], metric: 'warnings' |
 }
 
 /** Last 7 days, one point per day */
-export function getDailySparkline(events: ForkliftEvent[], metric: 'warnings' | 'dangers' | 'stopTime'): SparklinePoint[] {
+export function getDailySparkline(events: ForkliftEvent[], metric: SparklineMetric): SparklinePoint[] {
   const points: SparklinePoint[] = [];
   for (let i = 6; i >= 0; i--) {
     const day = startOfDay(subDays(new Date(), i));
@@ -207,9 +215,8 @@ export function getDailySparkline(events: ForkliftEvent[], metric: 'warnings' | 
       if (e.Trigger_Timestamp >= day && e.Trigger_Timestamp < nextDay) {
         if (metric === 'warnings' && e.Zone_Level === 'Warning') value++;
         if (metric === 'dangers' && e.Zone_Level === 'Danger') value++;
-        if (metric === 'stopTime' && e.Zone_Level === 'Danger' && e.Stop_Timestamp) {
-          value += Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp));
-        }
+        if (metric === 'stopTime' && e.Zone_Level === 'Danger') value += e.Duration_Sec || 0;
+        if (metric === 'warningTime' && e.Zone_Level === 'Warning') value += e.Duration_Sec || 0;
       }
     }
     points.push({ label, value });
@@ -218,16 +225,15 @@ export function getDailySparkline(events: ForkliftEvent[], metric: 'warnings' | 
 }
 
 /** Monthly aggregates across all data */
-export function getMonthlySparkline(events: ForkliftEvent[], metric: 'warnings' | 'dangers' | 'stopTime'): SparklinePoint[] {
+export function getMonthlySparkline(events: ForkliftEvent[], metric: SparklineMetric): SparklinePoint[] {
   const map = new Map<string, number>();
   for (const e of events) {
     const key = `${e.Trigger_Timestamp.getFullYear()}-${(e.Trigger_Timestamp.getMonth() + 1).toString().padStart(2, '0')}`;
     if (!map.has(key)) map.set(key, 0);
     if (metric === 'warnings' && e.Zone_Level === 'Warning') map.set(key, map.get(key)! + 1);
     if (metric === 'dangers' && e.Zone_Level === 'Danger') map.set(key, map.get(key)! + 1);
-    if (metric === 'stopTime' && e.Zone_Level === 'Danger' && e.Stop_Timestamp) {
-      map.set(key, map.get(key)! + Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp)));
-    }
+    if (metric === 'stopTime' && e.Zone_Level === 'Danger') map.set(key, map.get(key)! + (e.Duration_Sec || 0));
+    if (metric === 'warningTime' && e.Zone_Level === 'Warning') map.set(key, map.get(key)! + (e.Duration_Sec || 0));
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
