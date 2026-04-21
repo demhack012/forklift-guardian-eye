@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, Maximize2, X } from 'lucide-react';
 import { ForkliftEvent } from '@/lib/eventTypes';
-import { getDailyAggregates, getHourlyAggregates } from '@/lib/eventStats';
+import { getDailyAggregates, getHourlyAggregates, getCameraAggregates } from '@/lib/eventStats';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, AreaChart, Area, Cell
