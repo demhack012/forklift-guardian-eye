@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, Maximize2, X } from 'lucide-react';
 import { ForkliftEvent } from '@/lib/eventTypes';
-import { getDailyAggregates, getHourlyAggregates } from '@/lib/eventStats';
+import { getDailyAggregates, getHourlyAggregates, getCameraAggregates } from '@/lib/eventStats';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, AreaChart, Area, Cell
@@ -157,15 +157,19 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
   const [stopTo, setStopTo] = useState<Date | undefined>();
   const [hourlyFrom, setHourlyFrom] = useState<Date | undefined>();
   const [hourlyTo, setHourlyTo] = useState<Date | undefined>();
+  const [camFrom, setCamFrom] = useState<Date | undefined>();
+  const [camTo, setCamTo] = useState<Date | undefined>();
   const [fullscreen, setFullscreen] = useState<string | null>(null);
 
   const trendEvents = useFilteredEvents(events, trendFrom, trendTo);
   const stopEvents = useFilteredEvents(events, stopFrom, stopTo);
   const hourlyEvents = useFilteredEvents(events, hourlyFrom, hourlyTo);
+  const camEvents = useFilteredEvents(events, camFrom, camTo);
 
   const dailyTrend = getDailyAggregates(trendEvents);
   const dailyStop = getDailyAggregates(stopEvents);
   const hourly = getHourlyAggregates(hourlyEvents);
+  const cameras = getCameraAggregates(camEvents);
 
   const tooltipStyle = {
     contentStyle: {
@@ -224,6 +228,20 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
     </ResponsiveContainer>
   );
 
+  const renderCameraChart = (height: number) => (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={cameras} layout="vertical" margin={{ left: 24 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={ct.grid} horizontal={false} />
+        <XAxis type="number" tick={{ fill: ct.tick, fontSize: 11 }} />
+        <YAxis type="category" dataKey="camera" tick={{ fill: ct.tick, fontSize: 11 }} width={120} />
+        <Tooltip {...tooltipStyle} />
+        <Legend />
+        <Bar dataKey="warnings" stackId="a" name="Warnings" fill={COLORS.warning} radius={[0, 0, 0, 0]} />
+        <Bar dataKey="dangers" stackId="a" name="Brake Engagements" fill={COLORS.danger} radius={[0, 4, 4, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
   return (
     <>
       <div className="grid gap-6 lg:grid-cols-2">
@@ -244,6 +262,14 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
           <ChartHeader title="Hourly Distribution (peaks highlighted)" fromDate={hourlyFrom} toDate={hourlyTo} onFromChange={setHourlyFrom} onToChange={setHourlyTo} onClear={() => { setHourlyFrom(undefined); setHourlyTo(undefined); }} onFullscreen={() => setFullscreen('hourly')} />
           {renderHourlyChart(280)}
         </div>
+
+        {/* Camera Comparison */}
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+          <ChartHeader title="Events by Camera" fromDate={camFrom} toDate={camTo} onFromChange={setCamFrom} onToChange={setCamTo} onClear={() => { setCamFrom(undefined); setCamTo(undefined); }} onFullscreen={() => setFullscreen('camera')} />
+          {cameras.length > 0
+            ? renderCameraChart(Math.max(280, cameras.length * 36 + 60))
+            : <p className="text-sm text-muted-foreground py-12 text-center">No camera data</p>}
+        </div>
       </div>
 
       {/* Full-screen modals */}
@@ -255,6 +281,9 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
       </FullscreenChart>
       <FullscreenChart open={fullscreen === 'hourly'} onClose={() => setFullscreen(null)} title="Hourly Distribution">
         {renderHourlyChart(600)}
+      </FullscreenChart>
+      <FullscreenChart open={fullscreen === 'camera'} onClose={() => setFullscreen(null)} title="Events by Camera">
+        {renderCameraChart(600)}
       </FullscreenChart>
     </>
   );
