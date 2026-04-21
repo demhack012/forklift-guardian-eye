@@ -157,15 +157,19 @@ export function DashboardCharts({ events }: { events: ForkliftEvent[] }) {
   const [stopTo, setStopTo] = useState<Date | undefined>();
   const [hourlyFrom, setHourlyFrom] = useState<Date | undefined>();
   const [hourlyTo, setHourlyTo] = useState<Date | undefined>();
+  const [camFrom, setCamFrom] = useState<Date | undefined>();
+  const [camTo, setCamTo] = useState<Date | undefined>();
   const [fullscreen, setFullscreen] = useState<string | null>(null);
 
   const trendEvents = useFilteredEvents(events, trendFrom, trendTo);
   const stopEvents = useFilteredEvents(events, stopFrom, stopTo);
   const hourlyEvents = useFilteredEvents(events, hourlyFrom, hourlyTo);
+  const camEvents = useFilteredEvents(events, camFrom, camTo);
 
   const dailyTrend = getDailyAggregates(trendEvents);
   const dailyStop = getDailyAggregates(stopEvents);
   const hourly = getHourlyAggregates(hourlyEvents);
+  const cameras = getCameraAggregates(camEvents);
 
   const tooltipStyle = {
     contentStyle: {
