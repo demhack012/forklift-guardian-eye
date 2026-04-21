@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { ArrowUpDown, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
-type SortKey = 'Event_ID' | 'Trigger_Timestamp' | 'Zone_Level' | 'Stop_Timestamp';
+type SortKey = 'Event_ID' | 'Trigger_Timestamp' | 'Zone_Level' | 'Camera_ID' | 'Duration_Sec';
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 15;
@@ -27,6 +27,7 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
       return (
         e.Event_ID.toString().includes(q) ||
         e.Zone_Level.toLowerCase().includes(q) ||
+        e.Camera_ID.toLowerCase().includes(q) ||
         format(e.Trigger_Timestamp, 'yyyy-MM-dd HH:mm:ss').includes(q)
       );
     });
@@ -39,8 +40,8 @@ export function EventsTable({ events }: { events: ForkliftEvent[] }) {
         case 'Event_ID': cmp = a.Event_ID - b.Event_ID; break;
         case 'Trigger_Timestamp': cmp = a.Trigger_Timestamp.getTime() - b.Trigger_Timestamp.getTime(); break;
         case 'Zone_Level': cmp = a.Zone_Level.localeCompare(b.Zone_Level); break;
-        case 'Stop_Timestamp':
-          cmp = (a.Stop_Timestamp?.getTime() || 0) - (b.Stop_Timestamp?.getTime() || 0); break;
+        case 'Camera_ID': cmp = a.Camera_ID.localeCompare(b.Camera_ID); break;
+        case 'Duration_Sec': cmp = a.Duration_Sec - b.Duration_Sec; break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
