@@ -5,30 +5,34 @@ export interface PeriodStats {
   warnings: number;
   dangers: number;
   totalStopTimeSeconds: number;
+  totalWarningTimeSeconds: number;
 }
 
 export interface PeriodStatsWithTrend extends PeriodStats {
   warningsTrend: number | null;
   dangersTrend: number | null;
   stopTimeTrend: number | null;
+  warningTimeTrend: number | null;
 }
 
 function calcStats(events: ForkliftEvent[]): PeriodStats {
   let warnings = 0;
   let dangers = 0;
   let totalStopTimeSeconds = 0;
+  let totalWarningTimeSeconds = 0;
 
   for (const e of events) {
-    if (e.Zone_Level === 'Warning') warnings++;
+    if (e.Zone_Level === 'Warning') {
+      warnings++;
+      totalWarningTimeSeconds += e.Duration_Sec || 0;
+    }
     if (e.Zone_Level === 'Danger') {
       dangers++;
-      if (e.Stop_Timestamp) {
-        totalStopTimeSeconds += Math.abs(differenceInSeconds(e.Stop_Timestamp, e.Trigger_Timestamp));
-      }
+      totalStopTimeSeconds += e.Duration_Sec || 0;
     }
   }
 
-  return { warnings, dangers, totalStopTimeSeconds };
+  return { warnings, dangers, totalStopTimeSeconds, totalWarningTimeSeconds };
 }
 
 function calcTrend(current: number, previous: number): number | null {
@@ -42,6 +46,7 @@ function withTrend(current: PeriodStats, previous: PeriodStats): PeriodStatsWith
     warningsTrend: calcTrend(current.warnings, previous.warnings),
     dangersTrend: calcTrend(current.dangers, previous.dangers),
     stopTimeTrend: calcTrend(current.totalStopTimeSeconds, previous.totalStopTimeSeconds),
+    warningTimeTrend: calcTrend(current.totalWarningTimeSeconds, previous.totalWarningTimeSeconds),
   };
 }
 
@@ -63,7 +68,7 @@ export function getWeekStats(events: ForkliftEvent[]): PeriodStatsWithTrend {
 
 export function getOverallStats(events: ForkliftEvent[]): PeriodStatsWithTrend {
   const stats = calcStats(events);
-  return { ...stats, warningsTrend: null, dangersTrend: null, stopTimeTrend: null };
+  return { ...stats, warningsTrend: null, dangersTrend: null, stopTimeTrend: null, warningTimeTrend: null };
 }
 
 export function getFilteredStats(events: ForkliftEvent[]): PeriodStats {
